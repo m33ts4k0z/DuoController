@@ -973,7 +973,15 @@ static DWORD WINAPI XboxFfbThreadProc(LPVOID param)
 			ZeroMemory(&ffReport, sizeof(ffReport));
 			if (outputMem[0] == XB1_OUTPUT_REPORT_ID)
 			{
-				ffReport.Flags = outputMem[1];
+				// Translate to SYNTHETIC_CONTROLLER_OUTPUT_REPORT_FLAGS semantics like the
+				// DS path does. The raw PID "DC Enable Actuators" nibble uses a different
+				// bit order (actuator declaration order: LT, RT, left, right), so passing
+				// it through as-is makes consumers that test the *_VALID bits drop the
+				// motor magnitudes.
+				ffReport.Flags = SYNTHETIC_CONTROLLER_OUTPUT_REPORT_FLAG_RIGHT_MOTOR_VALID |
+					SYNTHETIC_CONTROLLER_OUTPUT_REPORT_FLAG_LEFT_MOTOR_VALID |
+					SYNTHETIC_CONTROLLER_OUTPUT_REPORT_FLAG_RIGHT_TRIGGER_VALID |
+					SYNTHETIC_CONTROLLER_OUTPUT_REPORT_FLAG_LEFT_TRIGGER_VALID;
 				ffReport.LeftTrigger = outputMem[2];
 				ffReport.RightTrigger = outputMem[3];
 				ffReport.LeftMotor = outputMem[4];
