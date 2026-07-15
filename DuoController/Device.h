@@ -81,6 +81,10 @@ typedef struct _DEVICE_CONTEXT
 	UCHAR InputReport[DS_REPORT_SIZE];
 	DS_OUTPUT_REPORT DsOutputReport;
 	SHARED_MEMORY_SERVER_ATTRIBUTES SharedMemServerAttributes;
+	// XUSB path only: monotonic packet number (bumped when the input report changes)
+	// and the last report seen, for change detection.
+	ULONG XusbPacketNumber;
+	UCHAR XusbLastReport[XB1_REPORT_SIZE];
 } DEVICE_CONTEXT, *PDEVICE_CONTEXT;
 
 // This macro will generate an inline function called DeviceGetContext

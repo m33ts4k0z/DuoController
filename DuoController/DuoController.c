@@ -1310,12 +1310,17 @@ static HRESULT XboxSendRawInput(DUO_CONTROLLER* controller, const DUO_CONTROLLER
 static HRESULT CreateXboxController(DUO_CONTROLLER* controller)
 {
 	WCHAR instanceId[256];
-	WCHAR hidInstanceId[256];
-	HRESULT result = InstallDuoControllerDevice(L"Root\\VID_045E&PID_02FF&IG_00", L"VID_045E&PID_02FF&DUOCONTROLLER", instanceId, ARRAYSIZE(instanceId), hidInstanceId, ARRAYSIZE(hidInstanceId));
+	// The Xbox controller is now an XUSB device (see Xusb.c / the INF's
+	// DuoController_Install_Xbox section), not a HID device. There is therefore no
+	// HID child collection to discover, so pass NULL for the child-id out params —
+	// this also skips the 5s child-enumeration wait in InstallDuoControllerDevice.
+	// The seed becomes the root instance id (ROOT\<seed>\0000) and keys the shared
+	// memory server, exactly as before.
+	HRESULT result = InstallDuoControllerDevice(L"Root\\VID_045E&PID_02FF&IG_00", L"VID_045E&PID_02FF&DUOCONTROLLER", instanceId, ARRAYSIZE(instanceId), NULL, 0);
 	if (FAILED(result))
 		return result;
 	wcscpy_s(controller->XboxInstanceId, ARRAYSIZE(controller->XboxInstanceId), instanceId);
-	wcscpy_s(controller->XboxHidInstanceId, ARRAYSIZE(controller->XboxHidInstanceId), hidInstanceId);
+	controller->XboxHidInstanceId[0] = L'\0';
 	controller->XboxInputMapping = NULL;
 	controller->XboxOutputMapping = NULL;
 	controller->XboxInputView = NULL;

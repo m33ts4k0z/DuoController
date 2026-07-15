@@ -29,12 +29,14 @@ DriverVer=
 %ROOT\VID_054C&PID_0CE6.DeviceName%=DuoController_Install_PS, ROOT\VID_054C&PID_0CE6
 %ROOT\VID_054C&PID_05C4.DeviceName%=DuoController_Install_PS, ROOT\VID_054C&PID_05C4
 %ROOT\VID_045E&PID_02FF&IG_00.DeviceName%=DuoController_Install_Xbox, ROOT\VID_045E&PID_02FF&IG_00
+%ROOT\DUOXUSBTEST.DeviceName%=DuoController_Install_Xusb, ROOT\DUOXUSBTEST
 
 [ControlFlags]
 ExcludeFromSelect=ROOT\VID_054C&PID_0DF2
 ExcludeFromSelect=ROOT\VID_054C&PID_0CE6
 ExcludeFromSelect=ROOT\VID_054C&PID_05C4
 ExcludeFromSelect=ROOT\VID_045E&PID_02FF&IG_00
+ExcludeFromSelect=ROOT\DUOXUSBTEST
 
 [ClassInstall32]
 AddReg=DuoControllerClass_RegistryAdd
@@ -81,26 +83,24 @@ UmdfHostPriority=PriorityHigh
 [DuoController_Install_PS.NT.CoInstallers]
 AddReg=CoInstallers_AddReg
 
-; Xbox (XInputHID-compatible HID device via xinputhid.sys)
+; Xbox — real XUSB device (plain UMDF function driver).
+; NOT a HID device: no mshidumdf, no xinputhid, no GIP includes. The driver
+; registers the XUSB device interface from code and answers the XUSB IOCTL
+; protocol, so XInput reads it exactly like real Xbox hardware.
 [DuoController_Install_Xbox]
-UmdfLibraryVersion=$UMDFVERSION$ 
+UmdfLibraryVersion=$UMDFVERSION$
 ServiceBinary=%13%\DuoController.dll
-Include=xinputhid.inf
-AddReg=Xbox_DevicePropertyFlags
 
 [DuoController_Install_Xbox.NT]
 CopyFiles=UMDriverCopy
 
 [DuoController_Install_Xbox.NT.Services]
-AddService=WUDFRd,0x000001f8,WUDFRD_ServiceInstall
-AddService=mshidumdf, 0x000001fa, mshidumdf.AddService
-Include=xinputhid.inf
-Needs=GIP_Hid.Services
+; 0x1fa (vs 0x1f8) sets SPSVCINST_ASSOCSERVICE: with no HID/mshidumdf service, WUDFRd
+; is the device's associated service (required for a UMDF-only function driver).
+AddService=WUDFRd,0x000001fa,WUDFRD_ServiceInstall
 
 [DuoController_Install_Xbox.NT.hw]
 AddReg=DuoController_Install.NT.hw.AddReg
-Include=xinputhid.inf
-Needs=GIP_Hid.HW
 
 [DuoController_Install_Xbox.NT.Wdf]
 UmdfService=DuoController,DuoController_Install_Xbox
@@ -114,21 +114,50 @@ UmdfHostPriority=PriorityHigh
 [DuoController_Install_Xbox.NT.CoInstallers]
 AddReg=CoInstallers_AddReg
 
-[Xbox_DevicePropertyFlags]
-HKR,,DevicePropertyFlags,0x00010001,0x4
+; ============ XUSB spike test device (plain UMDF function driver) ============
+; Not a HID device: no mshidumdf, no xinputhid. It registers the XUSB device
+; interface from code and answers the XUSB IOCTL protocol. Materialise with:
+;   devgen /add /instanceid DUOXUSB0 /hardwareid "ROOT\DUOXUSBTEST"
+[DuoController_Install_Xusb]
+UmdfLibraryVersion=$UMDFVERSION$
+ServiceBinary=%13%\DuoController.dll
+
+[DuoController_Install_Xusb.NT]
+CopyFiles=UMDriverCopy
+
+[DuoController_Install_Xusb.NT.Services]
+AddService=WUDFRd,0x000001fa,WUDFRD_ServiceInstall
+
+[DuoController_Install_Xusb.NT.hw]
+AddReg=DuoController_Install.NT.hw.AddReg
+
+[DuoController_Install_Xusb.NT.Wdf]
+UmdfService=DuoController,DuoController_Install_Xusb
+UmdfServiceOrder=DuoController
+UmdfKernelModeClientPolicy=AllowKernelModeClients
+UmdfFileObjectPolicy=AllowNullAndUnknownFileObjects
+UmdfMethodNeitherAction=Copy
+UmdfFsContextUsePolicy=CanUseFsContext2
+UmdfHostPriority=PriorityHigh
+
+[DuoController_Install_Xusb.NT.CoInstallers]
+AddReg=CoInstallers_AddReg
 
 [WUDFRD_ServiceInstall]
 DisplayName = %WudfRdDisplayName%
 ServiceType = 1
 StartType = 3
 ErrorControl = 1
-ServiceBinary = %13%\WUDFRd.sys
+; WUDFRd.sys is an inbox binary in %12% (System32\drivers), NOT copied into the
+; driver-store package (%13%). Referencing %13% makes AddService fail with
+; "binary not present" (0xE0000217) — fatal once WUDFRd is the associated service.
+ServiceBinary = %12%\WUDFRd.sys
 
 [mshidumdf.AddService]
 ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
 StartType      = 3                  ; SERVICE_DEMAND_START
 ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
-ServiceBinary  = %13%\mshidumdf.sys
+ServiceBinary  = %12%\mshidumdf.sys  ; inbox binary, same fix as WUDFRd above
 
 [CoInstallers_AddReg]
 HKR,,CoInstallers32,0x00010000,"WUDFCoinstaller.dll"
@@ -150,3 +179,4 @@ ROOT\VID_054C&PID_0DF2.DeviceName="DualSense Edge Wireless Controller"
 ROOT\VID_054C&PID_0CE6.DeviceName="DualSense Wireless Controller"
 ROOT\VID_054C&PID_05C4.DeviceName="DualShock 4 Wireless Controller"
 ROOT\VID_045E&PID_02FF&IG_00.DeviceName="Xbox One Elite Wireless Controller"
+ROOT\DUOXUSBTEST.DeviceName="DuoController XUSB Spike Test Device"

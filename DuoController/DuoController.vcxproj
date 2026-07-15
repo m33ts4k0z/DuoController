@@ -24,6 +24,8 @@
     <ClCompile Include="MessageProcessor.c" />
     <ClCompile Include="SharedMemoryServer.c" />
     <ClCompile Include="Queue.c" />
+    <ClCompile Include="XusbSpike.c" />
+    <ClCompile Include="Xusb.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Public.h" />
@@ -34,6 +36,8 @@
     <ClInclude Include="MessageProcessor.h" />
     <ClInclude Include="SharedMemoryServer.h" />
     <ClInclude Include="Queue.h" />
+    <ClInclude Include="XusbSpike.h" />
+    <ClInclude Include="Xusb.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Trace.h" />
   </ItemGroup>
@@ -106,7 +110,7 @@
       <SpecifyDriverVerDirectiveVersion>true</SpecifyDriverVerDirectiveVersion>
     </Inf>
     <Inf>
-      <TimeStamp>1.5.8.0</TimeStamp>
+      <TimeStamp>1.5.11.0</TimeStamp>
     </Inf>
     <DriverSign>
       <FileDigestAlgorithm>SHA256</FileDigestAlgorithm>

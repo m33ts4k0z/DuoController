@@ -14,6 +14,8 @@
 
 #include "Driver.h"
 #include "Driver.tmh"
+#include "XusbSpike.h"
+#include "Xusb.h"
 
 /// <summary>
 /// Initializes the driver. This is the first routine called by the system after
@@ -91,6 +93,25 @@ NTSTATUS DuoControllerEvtDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INI
 	UNREFERENCED_PARAMETER(Driver);
 
 	TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Entry");
+
+    // Device routing (branch before any HID-specific setup, since XUSB devices are
+    // plain function drivers, not HID-stack filters):
+    //   ROOT\DUOXUSBTEST            -> canned XUSB spike (isolated test device)
+    //   Xbox (VID_045E&PID_02FF)    -> real XUSB device backed by shared-memory input
+    //   everything else (DS/DS4/DS) -> HID gamepad filter
+    if (XusbSpikeIsSpikeDevice(DeviceInit))
+    {
+        status = XusbSpikeCreateDevice(DeviceInit);
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit (XUSB spike)");
+        return status;
+    }
+
+    if (XusbIsXboxDevice(DeviceInit))
+    {
+        status = XusbCreateDevice(DeviceInit);
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit (XUSB Xbox)");
+        return status;
+    }
 
     status = DuoControllerCreateDevice(DeviceInit);
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");

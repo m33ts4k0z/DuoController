@@ -23,6 +23,12 @@ EXTERN_C_START
 // {3d877443-4dda-4bab-a3e2-df607b30de4d}
 DEFINE_GUID (GUID_DEVINTERFACE_DuoController, 0x3d877443,0x4dda,0x4bab,0xa3,0xe2,0xdf,0x60,0x7b,0x30,0xde,0x4d);
 
+// XUSB device interface class — the interface XInput (xinput1_x.dll / GameInput) enumerates
+// to find XInput-capable controllers. A device that registers this interface and answers the
+// XUSB IOCTL protocol appears to XInputGetState as a real controller.
+// {EC87F1E3-C13B-4100-B5F7-8B84D54260CB}
+DEFINE_GUID (GUID_DEVINTERFACE_XUSB, 0xEC87F1E3,0xC13B,0x4100,0xB5,0xF7,0x8B,0x84,0xD5,0x42,0x60,0xCB);
+
 // Input client message header
 typedef struct _MESSAGE_HEADER
 {
