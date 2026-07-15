@@ -99,8 +99,16 @@ CopyFiles=UMDriverCopy
 ; is the device's associated service (required for a UMDF-only function driver).
 AddService=WUDFRd,0x000001fa,WUDFRD_ServiceInstall
 
+; A pure UMDF function driver must NOT list WUDFRd in LowerFilters: WUDFRd is already
+; the devnode's service, and adding it as a lower filter too loads the reflector twice
+; on one stack — its second AddDevice fails with STATUS_DEVICE_CONFIGURATION_ERROR
+; (0xc0000182) / CM_PROB_FAILED_ADD. (LowerFilters=WUDFRd is only for the HID sections,
+; where mshidumdf owns the FDO.) The DelReg heals devnodes created by older packages.
 [DuoController_Install_Xbox.NT.hw]
-AddReg=DuoController_Install.NT.hw.AddReg
+DelReg=DuoController_XusbFunction.NT.hw.DelReg
+
+[DuoController_XusbFunction.NT.hw.DelReg]
+HKR,,"LowerFilters"
 
 [DuoController_Install_Xbox.NT.Wdf]
 UmdfService=DuoController,DuoController_Install_Xbox
@@ -128,8 +136,9 @@ CopyFiles=UMDriverCopy
 [DuoController_Install_Xusb.NT.Services]
 AddService=WUDFRd,0x000001fa,WUDFRD_ServiceInstall
 
+; Same as the Xbox section: no WUDFRd lower filter on a WUDFRd-serviced devnode.
 [DuoController_Install_Xusb.NT.hw]
-AddReg=DuoController_Install.NT.hw.AddReg
+DelReg=DuoController_XusbFunction.NT.hw.DelReg
 
 [DuoController_Install_Xusb.NT.Wdf]
 UmdfService=DuoController,DuoController_Install_Xusb
