@@ -110,7 +110,7 @@
       <SpecifyDriverVerDirectiveVersion>true</SpecifyDriverVerDirectiveVersion>
     </Inf>
     <Inf>
-      <TimeStamp>1.5.11.0</TimeStamp>
+      <TimeStamp>1.5.13.0</TimeStamp>
     </Inf>
     <DriverSign>
       <FileDigestAlgorithm>SHA256</FileDigestAlgorithm>

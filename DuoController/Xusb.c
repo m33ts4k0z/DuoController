@@ -152,12 +152,13 @@ NTSTATUS XusbCreateDevice(_Inout_ PWDFDEVICE_INIT DeviceInit)
 
 	// NOTE: unlike the HID path, the XUSB device is deliberately NOT session-isolated.
 	// XInput is a global API — XInputGetState exposes the same 4 slots to every session,
-	// so a session-isolated XUSB device is a contradiction, and isolating a plain UMDF
-	// function driver whose install session differs from the target session fails device
-	// start with STATUS_DEVICE_CONFIGURATION_ERROR (0xc0000182). ViGEmBus, the reference
+	// so a session-isolated XUSB device is a contradiction. ViGEmBus, the reference
 	// XUSB provider, likewise does not isolate; its pads still reach every session because
 	// device interfaces are globally visible. So we skip the DEVPKEY_Device_SessionId
 	// assignment entirely here.
+	// (The 0xc0000182 start failures once blamed on isolation were actually the INF
+	// putting WUDFRd in LowerFilters on a devnode WUDFRd already services — see the
+	// [DuoController_Install_Xbox.NT.hw] comment in DuoController.inf.)
 
 	// Capture the device instance id — the shared-memory server derives its object
 	// names from it, and the client library uses the same id to find them.
@@ -340,9 +341,37 @@ VOID XusbEvtIoDeviceControl(
 
 	case IOCTL_XINPUT_SET_GAMEPAD_STATE:
 	{
-		// LED assignment / rumble. Rumble forwarding to the client is a follow-up;
-		// accept so XInput's SetState path (and slot assignment) succeed.
+		// LED assignment / rumble. Vibration is forwarded to the client through the
+		// shared-memory output channel as the same PID-shaped report the HID path's
+		// SetOutputReport emits ([0]=report id, [4]/[5]=left/right magnitude); the
+		// client's XboxFfbThreadProc translates it into the vibration callback.
 		UNREFERENCED_PARAMETER(InputBufferLength);
+		PVOID inBuf = NULL;
+		size_t inLen = 0;
+		if (NT_SUCCESS(WdfRequestRetrieveInputBuffer(Request, sizeof(XUSB_IN_SET_STATE), &inBuf, &inLen)))
+		{
+			XUSB_IN_SET_STATE* set = (XUSB_IN_SET_STATE*)inBuf;
+			if (set->Flags & XUSB_SET_STATE_FLAG_VIBRATION)
+			{
+				PSHARED_MEMORY_SERVER_ATTRIBUTES attr = &ctx->SharedMemServerAttributes;
+				if (attr->OutputView != NULL &&
+					WaitForSingleObject(attr->StopEvent, 0) != WAIT_OBJECT_0)
+				{
+					PBYTE outputView = (PBYTE)attr->OutputView;
+					outputView[0] = XB1_OUTPUT_REPORT_ID;
+					outputView[1] = 0x0C;                  // PID enable nibble: left+right motors
+					outputView[2] = 0;                     // trigger haptics: none in XInput
+					outputView[3] = 0;
+					outputView[4] = set->LeftMotorSpeed;
+					outputView[5] = set->RightMotorSpeed;
+					outputView[6] = 0;                     // duration/delay/loop zeroed, like the DS path
+					outputView[7] = 0;
+					outputView[8] = 0;
+					SetEvent(attr->OutputEvent);
+				}
+			}
+		}
+		// Always succeed: XInput's slot assignment depends on SetState succeeding.
 		status = STATUS_SUCCESS;
 		bytesReturned = 0;
 		break;

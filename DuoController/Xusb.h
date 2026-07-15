@@ -156,6 +156,9 @@ typedef struct _XUSB_IN_SET_STATE
 	UCHAR Flags;          // 0x01 LED, 0x02 vibration
 } XUSB_IN_SET_STATE;
 
+#define XUSB_SET_STATE_FLAG_LED       0x01
+#define XUSB_SET_STATE_FLAG_VIBRATION 0x02
+
 #include <poppack.h>
 
 // Returns TRUE if the device being added is the real Xbox controller that should
